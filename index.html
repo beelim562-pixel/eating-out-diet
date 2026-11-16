@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a3a2a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>出街飲食速查</title>
+  <style>
+    :root {
+      --bg: #f4f1ea; --card: #fffdf8; --ink: #1c241c; --muted: #5d6b5d; --line: #e4ddd0;
+      --green: #2f6b45; --green-soft: #e7f3ea; --red: #9b2c2c; --red-soft: #fdecec;
+      --gold: #8a6a1a; --gold-soft: #fff3cc; --yellow: #9a6b12; --yellow-soft: #fff6e0;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang HK", "Noto Sans TC", sans-serif;
+      background: var(--bg); color: var(--ink); line-height: 1.35;
+      padding-bottom: calc(28px + env(safe-area-inset-bottom));
+    }
+    header {
+      position: sticky; top: 0; z-index: 20; background: #1a3a2a; color: #fff;
+      padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    }
+    header h1 { font-size: 18px; margin: 0; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    header h1 button {
+      border: 0; background: rgba(255,255,255,.16); color: #fff; font-size: 13px; font-weight: 700;
+      border-radius: 999px; padding: 6px 10px; flex: 0 0 auto;
+    }
+    .quota { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; margin: 8px 0; }
+    .quota b { display: block; font-size: 20px; line-height: 1.1; }
+    .quota span { display: block; font-size: 11px; opacity: .85; }
+    .quota div { background: rgba(255,255,255,.12); border-radius: 10px; padding: 8px 4px; text-align: center; }
+    .meals { display: flex; gap: 6px; margin: 0 0 8px; }
+    .meals div {
+      flex: 1; background: rgba(255,255,255,.12); border-radius: 10px; padding: 6px 4px; text-align: center; font-size: 12px;
+    }
+    .meals b { display: block; font-size: 13px; font-weight: 800; }
+    .eq { font-size: 12px; opacity: .9; margin: 0 0 10px; }
+    #q { width: 100%; border: 0; border-radius: 12px; padding: 12px 14px; font-size: 16px; background: #fff; color: #111; }
+    nav {
+      display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px 8px;
+      -webkit-overflow-scrolling: touch; position: sticky;
+      top: var(--header-h, 220px); background: var(--bg); z-index: 15;
+    }
+    nav button {
+      flex: 0 0 auto; border: 0; background: #fff; color: var(--ink); border-radius: 999px;
+      padding: 8px 14px; font-size: 14px; font-weight: 600; box-shadow: 0 1px 0 var(--line);
+    }
+    nav button.on { background: var(--green); color: #fff; }
+    main { padding: 0 12px 40px; }
+    h2 { font-size: 15px; margin: 14px 4px 8px; color: var(--green); }
+    h2 small { font-weight: 500; color: var(--muted); font-size: 12px; }
+    .note { background: var(--gold-soft); color: #5a4308; border-radius: 12px; padding: 10px 12px; font-size: 13px; margin: 0 0 10px; }
+    .item {
+      display: flex; justify-content: space-between; gap: 10px; background: var(--card);
+      border-radius: 12px; padding: 12px; margin: 0 0 6px; border: 1px solid var(--line);
+    }
+    .item.prefer { border-color: #8fca9f; background: var(--green-soft); }
+    .item.mid { border-color: #e6c36a; background: var(--yellow-soft); }
+    .item.avoid { border-color: #f0b4b4; background: var(--red-soft); }
+    .name { font-size: 16px; font-weight: 650; }
+    .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .amt { flex: 0 0 auto; text-align: right; font-size: 14px; font-weight: 700; color: var(--green); max-width: 38%; }
+    .item.mid .amt { color: var(--yellow); }
+    .item.avoid .amt { color: var(--red); }
+    .tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; margin-right: 4px; vertical-align: middle; }
+    .tag.ok { background: var(--green); color: #fff; }
+    .tag.warn { background: var(--yellow); color: #fff; }
+    .tag.no { background: var(--red); color: #fff; }
+    .hidden { display: none !important; }
+    footer { text-align: center; color: var(--muted); font-size: 11px; padding: 8px 16px 24px; }
+    .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+    .legend { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+    .legend span { font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 8px; }
+    .lg { background: var(--green-soft); color: var(--green); }
+    .ly { background: var(--yellow-soft); color: var(--yellow); }
+    .lr { background: var(--red-soft); color: var(--red); }
+    .calc-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 0 0 10px; }
+    .calc-card label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
+    .calc-card input, .calc-card textarea, .calc-card select {
+      width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px;
+      font-size: 16px; background: #fff; color: var(--ink); font-family: inherit;
+    }
+    .calc-card textarea { min-height: 88px; resize: vertical; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .go {
+      width: 100%; margin-top: 12px; border: 0; background: var(--green); color: #fff;
+      font-size: 17px; font-weight: 700; border-radius: 12px; padding: 14px;
+    }
+    .ans { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .ans div { background: var(--green-soft); border-radius: 12px; padding: 12px 6px; text-align: center; }
+    .ans b { display: block; font-size: 26px; color: var(--green); line-height: 1.1; }
+    .ans span { font-size: 12px; color: var(--muted); }
+    .ans .over { background: var(--red-soft); }
+    .ans .over b { color: var(--red); }
+    #calcHint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+    .plan-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .plan-table th, .plan-table td { padding: 6px 4px; text-align: center; }
+    .plan-table th { font-size: 12px; color: var(--muted); }
+    .plan-table input {
+      width: 100%; max-width: 72px; margin: 0 auto; display: block;
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px 6px;
+      font-size: 16px; text-align: center; background: #fff;
+    }
+    .ghost {
+      width: 100%; margin-top: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink);
+      font-size: 15px; font-weight: 700; border-radius: 12px; padding: 12px;
+    }
+    .plan-total { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; margin-top: 10px; }
+    .plan-total div { background: var(--green-soft); border-radius: 10px; padding: 8px 4px; text-align: center; }
+    .plan-total b { display: block; font-size: 18px; color: var(--green); }
+    .plan-total span { font-size: 11px; color: var(--muted); }
+    .custom-flag { font-size: 12px; color: var(--gold); font-weight: 700; margin: 6px 0 0; }
+    .hist { font-size: 13px; }
+    .hist li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .q5 { grid-template-columns: repeat(5,1fr); }
+    .quota b { font-size: 17px; }
+    .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+    .btns3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .btn {
+      border: 0; border-radius: 12px; padding: 12px; font-size: 15px; font-weight: 700;
+      background: #fff; color: var(--ink); box-shadow: 0 1px 0 var(--line);
+    }
+    .btn.pri { background: var(--green); color: #fff; }
+    .btn.ghost { background: var(--green-soft); color: var(--green); }
+    .btn.warn { background: var(--yellow-soft); color: var(--yellow); }
+    .btn.danger { background: var(--red-soft); color: var(--red); }
+    .meal { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin: 0 0 8px; }
+    .meal h3 { margin: 0 0 6px; font-size: 15px; }
+    .meal .bar { font-size: 13px; color: var(--muted); }
+    .chiprow { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 8px; }
+    .chip { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 8px 12px; font-weight: 700; font-size: 13px; background: #fff; }
+    .chip.on { background: var(--green); color: #fff; }
+    .sheet {
+      position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .sheet-in {
+      background: var(--bg); width: 100%; max-height: 88vh; overflow: auto;
+      border-radius: 18px 18px 0 0; padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+    }
+    .sheet-in label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
+    .sheet-in input, .sheet-in select {
+      width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px;
+      font-size: 16px; background: #fff; color: var(--ink); font-family: inherit;
+    }
+    .logline { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+    .x { border: 0; background: var(--red-soft); color: var(--red); border-radius: 8px; padding: 4px 8px; font-weight: 700; }
+    .chk { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; }
+    .rec { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 0 0 8px; }
+    .rec.g { border-color: #8fca9f; background: var(--green-soft); }
+    .rec.y { border-color: #e6c36a; background: var(--yellow-soft); }
+  </style>
+</head>
+<body>
+  <header id="topbar">
+    <h1>出街飲食速查 <button type="button" id="openPlan">改配額</button></h1>
+    <div class="quota" id="quotaBoxes"></div>
+    <div class="meals" id="mealBoxes"></div>
+    <p class="eq">1份五穀=15g　·　1份蛋白=7g　·　1份脂肪=5g　·　全日＝早+午+晚＋奶＋水果</p>
+    <input id="q" type="search" placeholder="搜尋：叉燒、壽司、河粉、西冷…" autocomplete="off">
+  </header>
+
+  <nav id="tabs">
+    <button data-f="plan">配額</button>
+    <button class="on" data-f="today">今日</button>
+    <button data-f="calc">計份量</button>
+    <button data-f="out">出街貼士</button>
+    <button data-f="cha">茶餐廳</button>
+    <button data-f="cart">車仔麵</button>
+    <button data-f="jp">日本</button>
+    <button data-f="thai">泰越</button>
+    <button data-f="sh">京滬</button>
+    <button data-f="cafe">西廳Cafe</button>
+    <button data-f="chiu">潮洲</button>
+    <button data-f="vegshop">素食</button>
+    <button data-f="congee">粥品</button>
+    <button data-f="bakery">麵包店</button>
+    <button data-f="dimsum">飲茶</button>
+    <button data-f="hotpot">火鍋</button>
+    <button data-f="prefer">我嘅首選</button>
+    <button data-f="avoid">避免</button>
+    <button data-f="grain">五穀</button>
+    <button data-f="pro">蛋白</button>
+    <button data-f="veg">蔬菜</button>
+    <button data-f="fruit">水果</button>
+    <button data-f="dairy">奶類</button>
+    <button data-f="fat">脂肪</button>
+    <button data-f="drink">飲品調味</button>
+    <button data-f="all">全部</button>
+  </nav>
+
+  <main id="list">
+
+    <section data-cat="plan">
+      <h2>配額設定</h2>
+      <div class="note">預設：早 2C 1P 1F　午 4C 3P 1F　晚 3C 3P 1F，另加 1 份奶、3 份水果。可以改數字，只存呢部機。</div>
+      <div class="calc-card">
+        <table class="plan-table">
+          <thead>
+            <tr><th></th><th>五穀 C</th><th>蛋白 P</th><th>脂肪 F</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>早</th><td><input id="m0c" type="number" inputmode="decimal" min="0" step="any"></td><td><input id="m0p" type="number" inputmode="decimal" min="0" step="any"></td><td><input id="m0f" type="number" inputmode="decimal" min="0" step="any"></td></tr>
+            <tr><th>午</th><td><input id="m1c" type="number" inputmode="decimal" min="0" step="any"></td><td><input id="m1p" type="number" inputmode="decimal" min="0" step="any"></td><td><input id="m1f" type="number" inputmode="decimal" min="0" step="any"></td></tr>
+            <tr><th>晚</th><td><input id="m2c" type="number" inputmode="decimal" min="0" step="any"></td><td><input id="m2p" type="number" inputmode="decimal" min="0" step="any"></td><td><input id="m2f" type="number" inputmode="decimal" min="0" step="any"></td></tr>
+          </tbody>
+        </table>
+        <div class="row2">
+          <div><label>全日奶</label><input id="planDairy" type="number" inputmode="decimal" min="0" step="any"></div>
+          <div><label>全日水果</label><input id="planFruit" type="number" inputmode="decimal" min="0" step="any"></div>
+        </div>
+        <div class="plan-total" id="planTotal"></div>
+        <p class="custom-flag hidden" id="customFlag">而家用緊自訂數字，唔係預設。</p>
+        <button class="go" type="button" id="savePlan">用呢組數字</button>
+        <button class="ghost" type="button" id="resetPlan">還原預設</button>
+      </div>
+    </section>
+
+    <section data-cat="today">
+      <h2>今日進度</h2>
+      <div class="note">記低食咗咩，睇剩餘，再俾建議。得你撳「新一日」先清。配額去「配額」頁改。</div>
+      <div id="todayMeals"></div>
+      <div class="meal">
+        <h3>全日另外</h3>
+        <div class="bar" id="todayExtra"></div>
+      </div>
+      <div class="btns">
+        <button class="btn pri" type="button" id="btnEat">食咗</button>
+        <button class="btn danger" type="button" id="btnNewDay">新一日</button>
+      </div>
+      <div id="todayLogs"></div>
+      <h2>建議食咩</h2>
+      <div class="chiprow">
+        <button class="chip on" type="button" data-place="out">出街</button>
+        <button class="chip" type="button" data-place="home">屋企</button>
+      </div>
+      <div class="chiprow" id="recMeals"></div>
+      <div class="btns">
+        <button class="btn warn" type="button" id="btnYellow">顯示黃燈</button>
+      </div>
+      <div class="calc-card">
+        <div class="chk"><input type="checkbox" id="rStir" checked> 唔炒菜</div>
+        <div class="chk"><input type="checkbox" id="rNuts" checked> 唔堅果</div>
+        <div class="chk"><input type="checkbox" id="rHofun" checked> 唔河粉／公仔麵／伊麵</div>
+        <div class="chk"><input type="checkbox" id="rEgg" checked> 唔煎蛋炒蛋奄列</div>
+        <div class="chk"><input type="checkbox" id="rFatty" checked> 唔腩／排骨／雞翼／牛舌</div>
+      </div>
+      <div id="recs"></div>
+    </section>
+
+    <section data-cat="calc">
+      <h2>營養標籤 → 幾多份</h2>
+      <div class="note">1份五穀＝碳水 15g　·　1份蛋白＝7g　·　1份脂肪＝5g。有纖維就扣咗先再計五穀。超唔超標跟上面全日配額（預設 9C 7P 3F）。</div>
+      <div class="calc-card">
+        <label>貼營養標籤文字（可選，會自動填下面數字）</label>
+        <textarea id="labelPaste" placeholder="例如：&#10;碳水化合物 28g&#10;蛋白質 12g&#10;總脂肪 8g&#10;膳食纖維 3g"></textarea>
+        <label>食物名（可選）</label>
+        <input id="foodName" placeholder="例如：某牌子燕麥杯">
+        <div class="row2">
+          <div>
+            <label>標籤係</label>
+            <select id="base">
+              <option value="serve">每 1 份</option>
+              <option value="100">每 100 克</option>
+            </select>
+          </div>
+          <div>
+            <label id="eatLab">我食咗幾多份</label>
+            <input id="eat" type="number" inputmode="decimal" value="1" min="0" step="any">
+          </div>
+        </div>
+        <div class="row3">
+          <div><label>碳水 g</label><input id="carb" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+          <div><label>蛋白 g</label><input id="pro" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+          <div><label>脂肪 g</label><input id="fatg" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+        </div>
+        <div class="row2">
+          <div><label>纖維 g（可空）</label><input id="fiber" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></div>
+          <div><label>糖 g（只供參考）</label><input id="sugar" type="number" inputmode="decimal" min="0" step="any" placeholder=""></div>
+        </div>
+        <button class="go" type="button" id="calcBtn">計幾多份</button>
+        <div class="ans" id="ans" hidden>
+          <div id="aGrain"><b>0</b><span>份五穀</span></div>
+          <div id="aPro"><b>0</b><span>份蛋白質</span></div>
+          <div id="aFat"><b>0</b><span>份脂肪</span></div>
+        </div>
+        <p id="calcHint"></p>
+        <button class="ghost" type="button" id="addCalcToday">將呢個加入今日</button>
+      </div>
+      <div class="calc-card">
+        <h2 style="margin-top:0">最近計過</h2>
+        <ul class="hist" id="hist"></ul>
+      </div>
+    </section>
+
+    <section data-cat="out">
+      <h2>外出飲食貼士</h2>
+      <div class="legend"><span class="lg">綠＝減重期揀</span><span class="ly">黃＝Keep Fit可</span><span class="lr">紅＝減重期唔好</span></div>
+      <div class="note">跟餐單份量。去皮、走汁／醬另上。減重期避開高脂湯水同有糖飲品。街外已經有油，唔使再加脂肪。欠菜可自備車厘茄／青瓜／三色椒。</div>
+      <div class="item prefer" data-k="走汁 走油 去皮"><div><span class="tag ok">口頭</span><div class="name">對侍應講「走油／走汁／去皮」</div><div class="sub">點菜時講得，脂肪即刻少一截</div></div><div class="amt">必講</div></div>
+      <div class="item prefer" data-k="油菜 全走 蔬菜"><div><span class="tag ok">揀</span><div class="name">油菜要「全走」</div><div class="sub">你冊上面寫咗：唔好炒菜</div></div><div class="amt">全走油</div></div>
+      <div class="item prefer" data-k="黑咖啡 無糖茶 梳打 健怡"><div><span class="tag ok">0 kcal</span><div class="name">黑咖啡／無糖茶／梳打／健怡</div></div><div class="amt">不限</div></div>
+    </section>
+
+    <section data-cat="cha">
+      <h2>茶餐廳 <small>你手寫：常餐 4份五穀 + 3份蛋白</small></h2>
+      <div class="item prefer" data-k="瘦叉燒 切雞 豉油雞 燒肉 燒味飯"><div><span class="tag ok">綠</span><div class="name">燒味飯：瘦叉燒、切雞、豉油雞、燒肉</div><div class="sub">去皮、去肥、走汁、走蔥油　你圈咗瘦叉燒同走汁</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="冬瓜肉片湯飯 蕃茄牛肉湯飯 鮮魚片豆腐湯飯 海鮮湯飯"><div><span class="tag ok">綠</span><div class="name">湯飯：冬瓜肉片／蕃茄牛肉／鮮魚豆腐／海鮮</div><div class="sub">飯另上</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="常餐 叉燒 蕃茄鮮牛肉 豬潤 火腿 仿鮑 烚蛋 通粉 米粉 意粉 多士"><div><span class="tag ok">綠</span><div class="name">常餐：叉燒／蕃茄鮮牛肉／豬潤／火腿／仿鮑片</div><div class="sub">配通粉／米粉／意粉　配多士走牛油　配烚蛋　手寫 4五+3蛋白</div></div><div class="amt">4五+3蛋</div></div>
+      <div class="item prefer" data-k="鮮牛肉 豬潤 白魚蛋 牛丸 米粉 粗幼麵 米線"><div><span class="tag ok">綠</span><div class="name">粉麵：鮮牛肉、豬潤、白魚蛋、牛丸</div><div class="sub">米粉／粗幼麵／米線</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="烚蛋 火腿 蕃茄 三文治"><div><span class="tag ok">綠</span><div class="name">烚蛋／火腿／蕃茄三文治</div><div class="sub">可供底　走牛油</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="油菜"><div><span class="tag ok">綠</span><div class="name">油菜</div><div class="sub">全走油</div></div><div class="amt">全走</div></div>
+      <div class="item mid" data-k="燒鵝 燒鴨"><div><span class="tag warn">黃</span><div class="name">燒鵝／燒鴨飯</div><div class="sub">去皮、去肥、走汁</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item mid" data-k="螺仔肉碎湯飯"><div><span class="tag warn">黃</span><div class="name">螺仔肉碎湯飯</div><div class="sub">飯另上</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item mid" data-k="雪菜肉絲 炸菜肉絲 甜餐包 太陽蛋"><div><span class="tag warn">黃</span><div class="name">常餐：雪菜肉絲／炸菜肉絲</div><div class="sub">配粉麵　配甜餐包走牛油　配太陽蛋你打叉</div></div><div class="amt">太陽蛋避</div></div>
+      <div class="item mid" data-k="魚片 魚片頭 黃色魚蛋 墨丸 鯪魚球"><div><span class="tag warn">黃</span><div class="name">粉麵：魚片、魚片頭、黃魚蛋、墨丸、鯪魚球</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item mid" data-k="碟頭飯 粟米肉片 蕃茄牛肉片"><div><span class="tag warn">黃</span><div class="name">碟頭飯：粟米肉片／蕃茄牛肉片</div><div class="sub">飯同餸汁分開上，菜汁唔好撈晒</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="焗 炒粉 炒麵 炒飯"><div><span class="tag no">紅</span><div class="name">所有焗或炒的粉麵飯</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="煎豬扒 牛扒 雞扒"><div><span class="tag no">紅</span><div class="name">煎豬扒、牛扒、雞扒</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="蒸肉餅飯 盅頭飯"><div><span class="tag no">紅</span><div class="name">蒸肉餅飯、盅頭飯</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="牛腩 牛筋 雲吞 水餃 貢丸 餐肉 腸仔 沙嗲 公仔麵 河粉 瀨粉 銀針粉 伊麵"><div><span class="tag no">紅</span><div class="name">牛腩牛筋雲吞水餃貢丸餐肉腸仔沙嗲牛</div><div class="sub">公仔麵／河粉／瀨粉／銀針粉／伊麵</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="丹麥多士 煎蛋 炒蛋 奄列 西多士 奶醬多 炒菜"><div><span class="tag no">紅</span><div class="name">丹麥多士、煎蛋炒蛋奄列、西多士、奶醬多、炒菜</div><div class="sub">你特別叉咗煎蛋／炒蛋／奄列</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="cart">
+      <h2>車仔麵、米線 <small>你圈：兩款配料 = 3份蛋白</small></h2>
+      <div class="note">蛋白質配料對換：一款配料＝2份蛋白；兩款配料＝3份蛋白。</div>
+      <div class="item prefer" data-k="清湯 蕃茄湯"><div><span class="tag ok">綠</span><div class="name">湯底：清湯、蕃茄湯</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="米粉 米線 粗幼麵 粉絲 烏冬 薯粉 刀削麵 淮山麵"><div><span class="tag ok">綠</span><div class="name">粉：米粉、米線、粗幼麵、粉絲、烏冬、薯粉、刀削、淮山麵</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="鮮牛肉 雞肉 溏心蛋 豬潤 豬紅 牛栢葉 鮮魚片 鮮魷魚 墨魚"><div><span class="tag ok">綠</span><div class="name">優質蛋白：鮮牛、雞、溏心蛋、豬潤豬紅、栢葉、魚片、鮮魷、墨魚</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="白魚蛋 牛丸 龍蝦丸 火腿 蟹柳"><div><span class="tag ok">綠</span><div class="name">加工肉（鹽較高）：白魚蛋、牛丸、龍蝦丸、火腿、蟹柳</div></div><div class="amt">可</div></div>
+      <div class="item prefer" data-k="紫菜 油菜"><div><span class="tag ok">綠</span><div class="name">紫菜、油菜（全走）</div></div><div class="amt">揀</div></div>
+      <div class="item mid" data-k="魚片 魚片頭 黃色魚蛋 墨魚丸 火腿丸 鯪魚球 扎肉 雪菜肉絲 炸菜肉絲"><div><span class="tag warn">黃</span><div class="name">魚片／魚片頭、黃魚蛋、墨魚丸、火腿丸、鯪魚球</div><div class="sub">扎肉、雪菜肉絲、炸菜肉絲</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="酸辣 麻辣湯"><div><span class="tag no">紅</span><div class="name">湯底：酸辣、麻辣湯</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="公仔麵 油麵 河粉 潮粉 銀針粉 伊麵"><div><span class="tag no">紅</span><div class="name">公仔麵、油麵、河粉、潮粉、銀針粉、伊麵</div><div class="sub">你打叉</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="牛腩汁 咖喱汁 沙嗲汁"><div><span class="tag no">紅</span><div class="name">有汁湯麵：牛腩汁、咖喱汁、沙嗲汁</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="肉碎 牛腩 牛筋 牛雜 沙嗲牛肉 炸醬 腩肉 雞翼 豬皮 豬大腸 豬軟骨 豬頸肉 咖喱魷魚 牛脷 牛舌"><div><span class="tag no">紅</span><div class="name">肥膩配料：腩筋雜、炸醬、雞翼、皮腸軟骨豬頸、咖喱魷、牛脷</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="紅腸 貢丸 豬肉丸 午餐肉 腸仔 芝士腸 魚扎"><div><span class="tag no">紅</span><div class="name">紅腸、貢丸、豬肉丸、午餐肉、腸仔、芝士腸、魚扎</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="雲吞 水餃 素菜餃 魚皮餃"><div><span class="tag no">紅</span><div class="name">雲吞、水餃、素菜餃、魚皮餃</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="腐皮 枝竹 豆卜 炸豆腐 腩汁蘿蔔 炸魚皮"><div><span class="tag no">紅</span><div class="name">腐皮、枝竹、豆卜、炸豆腐、腩汁蘿蔔、炸魚皮</div><div class="sub">你打叉</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="jp">
+      <h2>日本菜</h2>
+      <div class="note">壽司 3 件＝1份五穀+1份蛋白。魚生約 2–3 片＝1份蛋白。</div>
+      <div class="item prefer" data-k="吞拿 三文魚 劍魚 油甘魚 八爪魚 墨魚 赤貝 魷魚 北寄貝 甜蝦 帶子 壽司"><div><span class="tag ok">綠</span><div class="name">壽司：吞拿（赤身）、三文、劍魚、油甘、八爪、墨魚、赤貝、魷、北寄、甜蝦、帶子</div><div class="sub">3件＝1五穀+1蛋白</div></div><div class="amt">3件</div></div>
+      <div class="item prefer" data-k="燒鯖魚 定食 蕎麥 烏冬 茶漬飯"><div><span class="tag ok">綠</span><div class="name">燒鯖魚定食</div><div class="sub">去皮，避開腩位　可配冷／熱蕎麥、烏冬、茶漬飯</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="燒飯團 三文魚 明太子 梅子 燒蕃薯 燒粟米 枝豆 茶碗蒸"><div><span class="tag ok">綠</span><div class="name">燒飯團（三文／明太子／梅子）、燒蕃薯、燒粟米</div><div class="sub">走牛油　枝豆、茶碗蒸都得</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="一夜干 秋刀魚 花魚 清酒煮蜆 燒蝦 帶子 鮑魚 雞腎 鵪鶉蛋 海鮮鍋 燒冬菇 燒蘆筍 蟹肉沙律"><div><span class="tag ok">綠</span><div class="name">燒魚、清酒煮蜆、燒物、海鮮鍋</div><div class="sub">一夜干／秋刀／花魚　蝦帶子鮑魚雞腎鵪鶉蛋　冬菇蘆筍走油　蟹肉沙律走醬</div></div><div class="amt">揀</div></div>
+      <div class="item mid" data-k="蟹籽 海膽 芥辣八爪魚 鯖魚壽司 照燒雞扒 麵豉湯 中華沙律"><div><span class="tag warn">黃</span><div class="name">蟹籽、海膽、芥辣八爪、鯖魚壽司、照燒雞扒、麵豉湯、中華沙律</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="魚腩 吞拿魚腩 劍魚腩 吞拿魚蓉"><div><span class="tag no">紅</span><div class="name">所有魚腩部位</div><div class="sub">三文魚腩、吞拿腩、劍魚腩、吞拿蓉　你打叉</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="左口魚 三文魚籽 鰻魚 穴子 甜蛋 腐皮"><div><span class="tag no">紅</span><div class="name">左口魚裙邊、左口魚、三文魚籽、鰻魚、穴子、甜蛋、腐皮</div><div class="sub">你打叉</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="粟米沙律 花之戀 拉麵 炒麵 炒飯 牛肉飯 豚肉飯 蛋包飯 咖哩 餃子 天婦羅 軟殼蟹 雞軟骨"><div><span class="tag no">紅</span><div class="name">有醬壽司、拉麵炒麵炒飯、牛／豚飯、咖哩、餃子、炸物</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="牛舌 牛脷 蒜片牛肉粒 牛肉鍋 豚肉鍋 豬軟骨 炒雜菜"><div><span class="tag no">紅</span><div class="name">牛脷／牛舌、蒜片牛肉粒、牛／豚肉鍋、豬軟骨、炒雜菜</div><div class="sub">牛脷唔得　你叉咗炸物同牛舌</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="thai">
+      <h2>泰國、越南菜</h2>
+      <div class="item prefer" data-k="海南雞飯 白飯"><div><span class="tag ok">綠</span><div class="name">海南雞飯</div><div class="sub">油飯轉白飯（你圈咗）　雞去皮</div></div><div class="amt">轉白飯</div></div>
+      <div class="item prefer" data-k="雞絲 海鮮 湯 撈 檬粉 粉絲 金邊粉"><div><span class="tag ok">綠</span><div class="name">雞絲／海鮮湯或撈檬粉、粉絲、金邊粉</div><div class="sub">走花生、炸蒜（你打叉）　你圈咗「湯」　牛脷唔得</div></div><div class="amt">揀湯</div></div>
+      <div class="item prefer" data-k="柚子大蝦沙律 香芒青木瓜沙律"><div><span class="tag ok">綠</span><div class="name">柚子大蝦沙律、香芒青木瓜沙律</div><div class="sub">走花生、炸蒜</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="米紙卷 生蝦刺身 泰式燒 烏頭魚 燒大蝦 燒帶子 燒魷魚 泰式燒雞 燒菠蘿"><div><span class="tag ok">綠</span><div class="name">米紙卷、生蝦、泰式燒魚／燒雞／燒海鮮</div><div class="sub">去皮避開腩　燒蝦帶子魷走汁　燒菠蘿得</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="青檸梳打 椰青水"><div><span class="tag ok">綠</span><div class="name">青檸梳打（走甜）、椰青水</div><div class="sub">唔食椰子肉　你寫 √2水果</div></div><div class="amt">2水果</div></div>
+      <div class="item mid" data-k="生牛肉 熟牛肉 扎肉 蕃茄蟹肉湯"><div><span class="tag warn">黃</span><div class="name">生／熟牛肉、扎肉、蕃茄蟹肉湯檬粉粉絲金邊粉</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="炒飯 焗飯 炒粉 河粉"><div><span class="tag no">紅</span><div class="name">炒飯焗飯炒粉麵、河粉</div><div class="sub">河粉你打叉</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="冬陰功 喇沙 香茅牛肉 豬扒 雞扒 豬頸 牛腩 燒牛肉 沙嗲 牛油雞翼 咖喱 牛脷 牛舌"><div><span class="tag no">紅</span><div class="name">冬陰功、喇沙、香茅牛／扒類、沙嗲、咖喱、牛脷</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="蔗蝦 炸蝦餅 炸魚餅 春卷 炒菜 芒果糯米飯 甜點 椰汁"><div><span class="tag no">紅</span><div class="name">炸物、炒菜、芒果糯米飯、甜點、椰汁飲品</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="sh">
+      <h2>京滬菜</h2>
+      <div class="item prefer" data-k="白飯 陽春麵 青菜煨麵 嫩雞煨麵"><div><span class="tag ok">綠</span><div class="name">白飯、陽春麵、青菜／嫩雞煨麵</div><div class="sub">你剔咗呢排　牛脷湯麵唔得</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="蒸饅頭 蒸銀絲卷 雞絲粉皮 燻蛋 溏心蛋 皮蛋豆腐 醉雞 豆腐花 無糖豆漿 花茶 中國茶"><div><span class="tag ok">綠</span><div class="name">蒸饅頭／銀絲卷走煉奶、雞絲粉皮走醬</div><div class="sub">燻蛋溏心蛋、皮蛋豆腐、醉雞去皮（你剔）、豆腐花走糖、無糖豆漿／茶　五香牛脷唔得</div></div><div class="amt">揀</div></div>
+      <div class="item mid" data-k="雪菜肉絲湯麵 榨菜肉絲 肉絲煨麵 上海湯年糕 雞絲涼拌麵 素菜蒸餃 素菜包 香菇素包 海蜇 拍青瓜 片皮鴨 樟茶鴨 竹笙海皇羹 瑤柱 蒸水蛋 桂花糕"><div><span class="tag warn">黃</span><div class="name">肉絲湯麵／煨麵走肥、湯年糕、涼拌麵、素餃素包</div><div class="sub">海蜇拍青瓜、片皮／樟茶鴨去皮、竹笙海皇羹、瑤柱肉鬆蒸水蛋、桂花糕</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="炒飯 菜飯 炒年糕 上海粗炒 擔擔麵 小籠包 雲吞 鍋貼 炸饅頭 生煎包 牛脷湯麵 五香牛脷 牛脷 牛舌"><div><span class="tag no">紅</span><div class="name">炒飯菜飯炒年糕擔擔麵、小籠包雲吞鍋貼炸饅頭生煎、牛脷湯麵、五香牛脷</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="毛豆百頁 馬蘭頭 鎮江餚肉 酸辣湯 排骨 咕嚕肉 賽螃蟹 水煮魚 酸菜魚 燻魚 炒鱔糊 獅子頭 豆沙 拔絲香蕉"><div><span class="tag no">紅</span><div class="name">百頁馬蘭餚肉、酸辣湯、排骨咕嚕、水煮／酸菜魚、鱔糊獅子頭、甜品</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="cafe">
+      <h2>西廳、Cafe</h2>
+      <div class="item prefer" data-k="田園沙律 慢煮雞 凱撒 煙三文魚"><div><span class="tag ok">綠</span><div class="name">田園沙律、慢煮雞／煙三文魚凱撒沙律</div><div class="sub">可加黑醋、檸檬汁</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="咸餐包 焗薯"><div><span class="tag ok">綠</span><div class="name">咸餐包、焗薯</div><div class="sub">走牛油、酸忌廉、煙肉　手寫旁註壽司＝2五穀</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="蕃茄海鮮湯意粉 凍海鮮 帶子 生蠔 大蝦 凍蟹"><div><span class="tag ok">綠</span><div class="name">蕃茄海鮮湯意粉、凍海鮮拼盤</div><div class="sub">帶子、生蠔、大蝦、凍蟹</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="烤 燒 grilled roasted 春雞 西冷 sirloin 牛柳 tenderloin 三文魚柳 大蝦"><div><span class="tag ok">綠</span><div class="name">烤／燒：春雞、西冷、牛柳、三文魚柳、大蝦</div><div class="sub">你圈「烤」，剔咗西冷同牛柳　唔好煎</div></div><div class="amt">烤／燒</div></div>
+      <div class="item prefer" data-k="班尼迪 煙三文魚"><div><span class="tag ok">綠</span><div class="name">煙三文魚班尼迪蛋</div><div class="sub">走荷蘭醬</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="bagel 比高包 panini 帕里尼 sourdough 酸種 baguette 法包 溫泉蛋 燒牛肉 火雞 火腿"><div><span class="tag ok">綠</span><div class="name">Bagel／Panini／酸種／法包</div><div class="sub">配溫泉蛋、燒牛、火雞、煙三文、火腿　走牛油、芝士、沙律醬（你叉咗後兩個）</div></div><div class="amt">走芝士醬</div></div>
+      <div class="item mid" data-k="意大利菜湯 燒雞扒沙律 甜餐包 蕃茄海鮮意粉 白酒蜆肉 三文魚扒 比目魚 鱈魚"><div><span class="tag warn">黃</span><div class="name">意大利菜湯、燒雞扒沙律、甜餐包</div><div class="sub">蕃茄海鮮／白酒蜆肉意粉走油　烤燒三文魚扒、比目魚柳、鱈魚柳</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="忌廉湯 龍蝦湯 南瓜湯 牛尾湯 蒜蓉包 薯蓉 薯條 薯角 炸洋蔥"><div><span class="tag no">紅</span><div class="name">忌廉湯／龍蝦湯／牛尾湯、蒜蓉包薯蓉、薯條炸物</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="pan-fried 煎扒 肉眼 T骨 豬肋骨 豬扒 羊架"><div><span class="tag no">紅</span><div class="name">煎扒、肉眼、T骨、豬肋骨、豬扒、羊架</div><div class="sub">你叉咗煎扒</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="肉醬意粉 千層麵 白汁 蒜香 青醬 意大利飯 意大利雲吞 薄餅 炒蛋 奄列"><div><span class="tag no">紅</span><div class="name">肉醬／白汁／蒜香／青醬意粉、千層、意飯、意雲吞、薄餅、炒蛋奄列</div><div class="sub">你叉咗青醬、意飯、意雲吞</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="chiu">
+      <h2>潮洲菜</h2>
+      <div class="item prefer" data-k="白粥 蠔仔粥"><div><span class="tag ok">綠</span><div class="name">白粥、蠔仔粥</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="凍花蟹 白灼東風螺 白灼蝦"><div><span class="tag ok">綠</span><div class="name">凍花蟹、白灼東風螺、白灼蝦</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="凍魚 烏頭 大眼雞 馬友"><div><span class="tag ok">綠</span><div class="name">凍魚：烏頭、大眼雞、馬友</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="滷水 鵝片 墨魚 鴨腎 雞腎 滷水蛋 潮洲白魚蛋"><div><span class="tag ok">綠</span><div class="name">滷水：鵝片、墨魚、鴨腎、雞腎、滷水蛋（走汁）</div><div class="sub">潮洲白魚蛋都得</div></div><div class="amt">走汁</div></div>
+      <div class="item mid" data-k="方魚肉碎粥 油鹽水粉絲蜆 魚湯浸花甲 韭菜豬紅"><div><span class="tag warn">黃</span><div class="name">方魚肉碎粥、油鹽水粉絲蜆、魚湯浸花甲、韭菜豬紅</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="炒飯 炒粉麵 煎蠔餅"><div><span class="tag no">紅</span><div class="name">所有炒飯、炒粉麵、煎蠔餅</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="滷水豆腐 紅腸 鵝翼 大腸 生腸 鵝腸 豬耳"><div><span class="tag no">紅</span><div class="name">滷水：豆腐、紅腸、鵝翼、大腸、生腸、鵝腸、豬耳</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="vegshop">
+      <h2>素食店</h2>
+      <div class="item prefer" data-k="白飯 白粥 南瓜粥 粟米粥 上湯素麵"><div><span class="tag ok">綠</span><div class="name">白飯、白粥、南瓜粥、粟米粥、上湯素麵</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="素壽司 素刺身"><div><span class="tag ok">綠</span><div class="name">素壽司、素刺身</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="蒸水蛋 清蒸豆腐 粟米豆腐羹"><div><span class="tag ok">綠</span><div class="name">蒸水蛋、清蒸豆腐、粟米豆腐羹</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="沙律吧 粟米 蔬菜 水果 黑醋 檸檬"><div><span class="tag ok">綠</span><div class="name">沙律吧：粟米、蔬菜、新鮮水果</div><div class="sub">可加黑醋、檸檬汁</div></div><div class="amt">揀</div></div>
+      <div class="item mid" data-k="蒸素餃 蒸素蘿蔔糕 素叉燒 素雞 紅豆沙 綠豆沙"><div><span class="tag warn">黃</span><div class="name">蒸素餃、蒸素蘿蔔糕、素叉燒、素雞、紅／綠豆沙</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="炒 燴 炆 焗 炸芋頭魚 齋滷味 素鵝 腐皮 腐竹 糯米卷 炒菜 素肉漢堡"><div><span class="tag no">紅</span><div class="name">炒燴炆焗粉麵飯、炸芋頭魚、齋滷味／素鵝／腐皮腐竹／糯米卷</div><div class="sub">炒菜、油醃蔬菜、素肉漢堡都避</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="congee">
+      <h2>粥品店</h2>
+      <div class="item prefer" data-k="白粥 皮蛋瘦肉粥 滑牛肉片粥 窩蛋滑牛肉粥 鮮魚片粥 雞絲粥 豬潤粥 豬紅粥"><div><span class="tag ok">綠</span><div class="name">白粥、皮蛋瘦肉、滑牛／窩蛋滑牛、鮮魚片、雞絲、豬潤、豬紅粥</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="蒸饅頭 蒸銀絲卷"><div><span class="tag ok">綠</span><div class="name">蒸饅頭、蒸銀絲卷</div></div><div class="amt">揀</div></div>
+      <div class="item mid" data-k="艇仔粥 鯪魚球粥 及第粥 豬腰粥 蒸齋腸粉 蝦米腸粉"><div><span class="tag warn">黃</span><div class="name">艇仔粥、鯪魚球粥、及第粥、豬腰粥</div><div class="sub">蒸齋腸粉、蝦米腸粉（走醬）</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="豬骨粥 碎牛肉粥 雞粥 魚腩粥 魚雲魚頭粥 炒麵 炒米粉 炒河粉 油炸鬼 牛脷酥 煎堆 粽"><div><span class="tag no">紅</span><div class="name">豬骨／碎牛／雞／魚腩／魚雲魚頭粥</div><div class="sub">炒麵米粉河粉、油炸鬼牛脷酥煎堆、各款粽</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="bakery">
+      <h2>麵包店</h2>
+      <div class="item prefer" data-k="燕麥包 黑麥包 咸麵包 豬仔包 sourdough baguette panini bagel pita muffin"><div><span class="tag ok">綠</span><div class="name">燕麥／黑麥／咸麵包、豬仔包、酸種、法包、Panini、Bagel、Pita、英式鬆餅</div></div><div class="amt">揀</div></div>
+      <div class="item mid" data-k="甜餐包 提子包 火腿蛋包 香草軟包 合桃包 芝麻包"><div><span class="tag warn">黃</span><div class="name">甜餐包、提子包、火腿蛋包、香草軟包、合桃包、芝麻包</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="腸仔包 吞拿魚包 雞尾包 肉鬆包 豬扒包 牛角包 菠蘿包 scone 蒜蓉包 椰絲奶油 蛋糕 蛋撻 丹麥酥"><div><span class="tag no">紅</span><div class="name">有餡包（腸仔／吞拿／雞尾／肉鬆／豬扒）</div><div class="sub">牛角菠蘿鬆餅蒜蓉椰絲奶油、蛋糕、蛋撻、丹麥酥</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="dimsum">
+      <h2>中式酒樓（飲茶）</h2>
+      <div class="note">點心較高脂，一星期最多一次。½小碗飯粉＝1五穀；1小碗粥＝1五穀；腸粉1條＝1五穀；蒸包1個＝2五穀；點心1件＝1蛋白。</div>
+      <div class="item prefer" data-k="白飯 勝瓜肉片湯飯 冬瓜海鮮湯飯 雪菜肉絲窩米 海鮮湯米線"><div><span class="tag ok">綠</span><div class="name">白飯、勝瓜肉片／冬瓜海鮮湯飯、雪菜肉絲窩米、海鮮湯米線</div><div class="sub">½小碗＝1份五穀</div></div><div class="amt">½小碗</div></div>
+      <div class="item prefer" data-k="皮蛋瘦肉粥 魚片粥"><div><span class="tag ok">綠</span><div class="name">皮蛋瘦肉粥、魚片粥</div><div class="sub">1小碗＝1份五穀</div></div><div class="amt">1小碗</div></div>
+      <div class="item prefer" data-k="鮮蝦腸粉 帶子腸粉"><div><span class="tag ok">綠</span><div class="name">鮮蝦／帶子腸粉</div><div class="sub">走油、豉油另上　1條＝1份五穀</div></div><div class="amt">1條</div></div>
+      <div class="item prefer" data-k="雞包仔 叉燒包 奶皇包"><div><span class="tag ok">綠</span><div class="name">雞包仔、叉燒包、奶皇包</div><div class="sub">1個＝2份五穀</div></div><div class="amt">1個=2五穀</div></div>
+      <div class="item prefer" data-k="蝦餃 帶子餃 菜苗餃 上素蒸粉果 蒸鯪魚球"><div><span class="tag ok">綠</span><div class="name">蝦餃、帶子餃、菜苗餃、上素蒸粉果、蒸鯪魚球</div><div class="sub">1件＝1份蛋白　一星期最多一次</div></div><div class="amt">1件=1蛋白</div></div>
+      <div class="item prefer" data-k="叉燒 切雞 豉油雞 燒肉 上湯灼菜"><div><span class="tag ok">綠</span><div class="name">燒味：叉燒、切雞、豉油雞、燒肉</div><div class="sub">去皮去肥走汁走蔥油　上湯灼菜走油</div></div><div class="amt">揀</div></div>
+      <div class="item mid" data-k="叉燒腸粉 牛肉腸粉 菜肉包 燒賣 蒸蘿蔔糕 潮洲粉果 薑蔥牛栢葉 桂花糕 紅棗糕 紅豆沙 綠豆沙"><div><span class="tag warn">黃</span><div class="name">叉燒／牛肉腸粉走油豉油另上、菜肉包、燒賣、蘿蔔糕、潮洲粉果、薑蔥栢葉</div><div class="sub">桂花糕、紅棗糕、紅／綠豆沙</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="盅頭飯 糯米飯 荷葉飯 炒 燴 炆 流沙奶黃包 麻蓉包 炸兩"><div><span class="tag no">紅</span><div class="name">盅頭／糯米／荷葉飯、炒燴炆粉麵飯、流沙奶黃、麻蓉包、炸兩</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="山竹牛肉球 雞扎 珍珠雞 腐皮卷 鳳爪排骨 鮮竹卷 馬拉糕 叉燒酥 春卷 咸水角 合桃露 芝麻糊 炒菜"><div><span class="tag no">紅</span><div class="name">牛肉球、雞扎、珍珠雞、腐皮卷、鳳爪排骨、鮮竹卷、馬拉糕、叉燒酥</div><div class="sub">春卷咸水角、合桃露芝麻糊、所有炒菜</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="hotpot">
+      <h2>火鍋</h2>
+      <div class="note">菜同肉分開灼，唔好等菜吸咗肉油。</div>
+      <div class="item prefer" data-k="清湯 皮蛋芫茜 蕃茄薯仔 海鮮 昆布"><div><span class="tag ok">綠</span><div class="name">湯底：清湯、皮蛋芫茜、蕃茄薯仔、海鮮、昆布</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="烏冬 粉絲 米線 米粉 淮山麵 薯粉 芋絲 粟米 蓮藕"><div><span class="tag ok">綠</span><div class="name">五穀：烏冬、粉絲、米線、米粉、淮山麵、薯粉、芋絲、粟米、蓮藕</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="鮮牛肉片 金錢脷 封門柳 雞肉 鴕鳥 田雞 豬潤 豬紅 鴨血 鮮魚片 蟹 魷魚 蠔 海蝦 鮑魚 帶子 大蜆 花甲 象拔蚌 桂花蚌 珊瑚蚌 牛栢葉 花膠 豆腐 蜂巢豆腐 牛丸 白魚蛋 蝦丸 火腿丸 蟹柳"><div><span class="tag ok">綠</span><div class="name">蛋白：鮮牛、金錢脷、封門柳、雞、鴕鳥、田雞、豬潤豬紅鴨血</div><div class="sub">魚蟹魷蠔蝦鮑帶子蜆花甲蚌、栢葉花膠豆腐蜂巢、牛丸白魚蛋蝦丸火腿丸蟹柳</div></div><div class="amt">揀</div></div>
+      <div class="item prefer" data-k="蔬菜 火鍋菜"><div><span class="tag ok">綠</span><div class="name">各類蔬菜</div><div class="sub">同肉分開灼</div></div><div class="amt">分開灼</div></div>
+      <div class="item mid" data-k="烏雞 豆乳 壽喜燒 墨魚丸 魚片頭 手打墨魚滑 蝦滑"><div><span class="tag warn">黃</span><div class="name">湯底：烏雞、豆乳、壽喜燒</div><div class="sub">蛋白：墨魚丸、魚片頭、手打墨魚滑、蝦滑</div></div><div class="amt">Keep Fit</div></div>
+      <div class="item avoid" data-k="麻辣 沙嗲 花雕雞 胡椒豬肚 牛骨 豬骨"><div><span class="tag no">紅</span><div class="name">湯底：麻辣、沙嗲、花雕雞、胡椒豬肚、牛骨、豬骨</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="公仔麵 油麵 炸芋頭片 肥牛 牛舌 豚肉片 豬頸肉 鯇魚腩 鱔片 豬肉丸 貢丸 芝心丸 香腸 午餐肉"><div><span class="tag no">紅</span><div class="name">公仔麵油麵炸芋頭片</div><div class="sub">肥牛牛舌豚肉豬頸鯇腩鱔片、豬肉丸貢丸芝心丸香腸午餐肉</div></div><div class="amt">避免</div></div>
+      <div class="item avoid" data-k="響鈴 生根 炸魚皮 魚皮餃 雲吞 水餃"><div><span class="tag no">紅</span><div class="name">響鈴、生根、炸魚皮、魚皮餃、雲吞、水餃</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="grain">
+      <h2>五穀類 <small id="grainCap">每項＝1份</small></h2>
+      <div class="note">熟食以 250ml 碗計。手寫：生重 20g＝1份。</div>
+      <div class="item" data-k="方包 白包 麥包"><div><div class="name">麥／白方包</div><div class="sub">生命麵包大小</div></div><div class="amt">1片</div></div>
+      <div class="item" data-k="酸種 sourdough"><div><div class="name">酸種麵包</div></div><div class="amt">½片</div></div>
+      <div class="item" data-k="豬仔包"><div><div class="name">豬仔包</div></div><div class="amt">½個</div></div>
+      <div class="item" data-k="pita 比得包"><div><div class="name">比得包 Pita</div></div><div class="amt">½個</div></div>
+      <div class="item" data-k="bagel 比高包"><div><div class="name">比高包 Bagel</div></div><div class="amt">⅓個</div></div>
+      <div class="item" data-k="饅頭"><div><div class="name">饅頭（5×3cm）</div></div><div class="amt">1個</div></div>
+      <div class="item" data-k="梳打餅 瑪莉餅"><div><div class="name">梳打餅／瑪莉餅</div></div><div class="amt">3塊</div></div>
+      <div class="item" data-k="白飯 紅米 糙米"><div><div class="name">白飯／紅米／糙米飯</div><div class="sub">熟　20g生＝1份</div></div><div class="amt">⅓碗</div></div>
+      <div class="item" data-k="米粉 米線 粉絲 蛋麵 蝦籽麵 烏冬 蕎麥 刀削 意粉 通粉 檬粉 金邊粉 粥"><div><div class="name">粉／麵（熟）</div><div class="sub">米粉米線粉絲蛋麵烏冬蕎麥刀削意粉檬粉金邊粉 ⅓碗　粥 ½碗</div></div><div class="amt">⅓碗</div></div>
+      <div class="item" data-k="麥皮 粟米片 薯仔 蕃薯 栗子 粟米 芋頭 蓮藕 淮山 餃子皮"><div><div class="name">其他澱粉</div><div class="sub">麥皮18g　薯仔100g　蕃薯／芋頭／淮山70g　栗子5粒　蓮藕5片　餃皮5片</div></div><div class="amt">見細字</div></div>
+    </section>
+
+    <section data-cat="pro">
+      <h2>蛋白質類 <small id="proCap">每項＝1份</small></h2>
+      <div class="item prefer" data-k="瘦豬肉 豬脷 柳梅 豬扒"><div><span class="tag ok">揀</span><div class="name">瘦豬肉</div><div class="sub">豬脷／柳梅／無骨豬扒　熟＝麻雀牌　生40g</div></div><div class="amt">1份</div></div>
+      <div class="item" data-k="瘦牛肉 雞柳 雞胸 魚"><div><div class="name">瘦牛、雞柳／胸、魚背魚尾</div><div class="sub">魚 2平湯匙　避比目魚、銀鱈</div></div><div class="amt">麻雀牌／40g</div></div>
+      <div class="item prefer" data-k="大蜆 花甲 螺 水浸吞拿魚"><div><span class="tag ok">揀</span><div class="name">大蜆／花甲／螺　·　水浸吞拿魚</div></div><div class="amt">7隻 / ½罐</div></div>
+      <div class="item" data-k="雞蛋 鵪鶉蛋 中蝦 青口 帶子 蟶子 生蠔 鮑魚 豆腐 豆漿 枝豆 火腿 芝士 煙三文魚 魚蛋 牛丸"><div><div class="name">蛋、蝦6隻、青口／帶子／蟶4、蠔3、鮑2</div><div class="sub">蛋1隻／鵪鶉3　豆腐½磚　豆漿1杯　枝豆½碗</div></div><div class="amt">見細字</div></div>
+      <div class="item avoid" data-k="排骨 雞翼 牛仔骨 腩 皮 比目魚 銀鱈"><div><span class="tag no">避</span><div class="name">排骨、雞翼、牛仔骨、腩、皮、比目魚、銀鱈</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="veg">
+      <h2>蔬菜類</h2>
+      <div class="note"><b>唔好炒菜。</b>甲類熟2平碗＝1份。乙類熟1平碗＝1份。</div>
+      <div class="item" data-k="菜心 油麥菜 椰菜 芥蘭 菠菜 通菜 西洋菜 芥菜 豆苗 黑木耳 生菜 青瓜 冬瓜 菇"><div><div class="name">甲類菜（高纖同其他）</div><div class="sub">葉菜、瓜類、菇、白蘿蔔、芹菜、冬瓜等</div></div><div class="amt">2平碗</div></div>
+      <div class="item" data-k="西蘭花 四季豆 蘆筍 荷蘭豆 洋蔥 青豆 紅蘿蔔 南瓜"><div><div class="name">乙類菜</div><div class="sub">西蘭花、四季豆、蘆筍、荷蘭豆、洋蔥、紅蘿蔔、南瓜等</div></div><div class="amt">1平碗</div></div>
+      <div class="item" data-k="蕃茄 車厘茄 金菇 秋葵 牛蒡 白果 馬蹄 紫菜 髮菜 雪耳"><div><div class="name">丙類（獨立份量）</div><div class="sub">蕃茄2個　車厘茄15　金菇½包　秋葵11　馬蹄8</div></div><div class="amt">見細字</div></div>
+    </section>
+
+    <section data-cat="fruit">
+      <h2>水果類 <small id="fruitCap">每項＝1份</small></h2>
+      <div class="item" data-k="蘋果 橙 柑 蕉 奇異果 芒果 火龍果 梨 啤梨"><div><div class="name">常見生果</div><div class="sub">小蘋果／橙1個　蕉½條　奇異果1　芒果⅓　火龍果½　大梨½</div></div><div class="amt">1份</div></div>
+      <div class="item" data-k="提子 車厘子 士多啤梨 藍莓 西瓜 木瓜 龍眼 荔枝"><div><div class="name">提子／漿果／瓜</div><div class="sub">小提子12／大6　車厘子10　士多8　西瓜木瓜1碗　龍眼荔枝8</div></div><div class="amt">1份</div></div>
+      <div class="item prefer" data-k="牛油果"><div><span class="tag ok">可</span><div class="name">牛油果</div><div class="sub">¼個＝1水果+1脂肪</div></div><div class="amt">¼個</div></div>
+      <div class="item avoid" data-k="榴槤 椰青 罐裝 加糖果汁"><div><span class="tag no">避</span><div class="name">榴槤、椰青肉、罐裝水果、加糖果汁</div></div><div class="amt">避免</div></div>
+    </section>
+
+    <section data-cat="dairy">
+      <h2>奶類 <small id="dairyCap">全日配額</small></h2>
+      <div class="item prefer" data-k="低脂芝士 加鈣無糖豆漿"><div><span class="tag ok">揀</span><div class="name">低脂芝士 1片　·　加鈣無糖豆漿 1杯</div></div><div class="amt">1份</div></div>
+      <div class="item" data-k="脫脂奶 乳酪"><div><div class="name">脫脂奶 1杯　·　脫脂無糖乳酪 150g</div></div><div class="amt">1份</div></div>
+    </section>
+
+    <section data-cat="fat">
+      <h2>脂肪類 <small id="fatCap">全日配額</small></h2>
+      <div class="item prefer" data-k="奇亞籽"><div><span class="tag ok">*</span><div class="name">奇亞籽 2茶匙　·　植物油／麻油 1茶匙</div></div><div class="amt">1份</div></div>
+      <div class="item avoid" data-k="花生 杏仁 腰果 合桃"><div><span class="tag no">避</span><div class="name">花生肉、杏仁、腰果、合桃</div><div class="sub">你打叉</div></div><div class="amt">暫避</div></div>
+    </section>
+
+    <section data-cat="drink">
+      <h2>飲品 · 調味</h2>
+      <div class="item prefer" data-k="黑咖啡 無糖茶 健怡 梳打"><div><span class="tag ok">0 kcal</span><div class="name">黑咖啡、無糖茶、健怡、梳打水</div></div><div class="amt">不限</div></div>
+      <div class="item" data-k="薑蔥蒜 辣椒 醋 檸檬 豉油 鹽 蠔油"><div><div class="name">首選：薑蔥蒜、辣椒、醋、檸檬、香草</div><div class="sub">次選每餐上限：鹽／雞粉⅓茶匙　豉油1茶匙　蠔油1湯匙</div></div><div class="amt">少鹽</div></div>
+    </section>
+  </main>
+
+  <p class="empty hidden" id="empty">搵唔到。試第二個字。</p>
+  <div id="sheet" class="sheet hidden">
+    <div class="sheet-in">
+      <h2>食咗咩</h2>
+      <label>記入邊餐</label>
+      <select id="logMeal"></select>
+      <div class="chiprow" style="margin-top:8px">
+        <button class="chip on" type="button" data-logmode="pick">速查揀餸</button>
+        <button class="chip" type="button" data-logmode="manual">自己入份量</button>
+      </div>
+      <div id="pickBox">
+        <input id="pickQ" type="search" placeholder="搜尋餸名…" autocomplete="off">
+        <div id="pickList" style="max-height:28vh;overflow:auto;margin-top:8px"></div>
+      </div>
+      <label>名稱</label>
+      <input id="logName" placeholder="例如：瘦叉燒飯">
+      <div class="row3">
+        <div><label>C 五穀</label><input id="logC" type="number" inputmode="decimal" value="0" step="any"></div>
+        <div><label>P 蛋白</label><input id="logP" type="number" inputmode="decimal" value="0" step="any"></div>
+        <div><label>F 脂肪</label><input id="logF" type="number" inputmode="decimal" value="0" step="any"></div>
+      </div>
+      <div class="row2">
+        <div><label>水果</label><input id="logFr" type="number" inputmode="decimal" value="0" step="any"></div>
+        <div><label>奶</label><input id="logD" type="number" inputmode="decimal" value="0" step="any"></div>
+      </div>
+      <button class="go" type="button" id="logSave">記入今日</button>
+      <button class="ghost" type="button" id="logCancel">取消</button>
+    </div>
+  </div>
+  <footer>個人出街速查，按你小冊子同手寫圈記整理。唔係醫療診斷。</footer>
+
+  <script>
+    const q = document.getElementById('q');
+    const empty = document.getElementById('empty');
+    const tabs = document.getElementById('tabs');
+    let filter = 'today';
+    const DEFAULT_PLAN = {
+      meals: [
+        { name: '早', c: 2, p: 1, f: 1 },
+        { name: '午', c: 4, p: 3, f: 1 },
+        { name: '晚', c: 3, p: 3, f: 1 }
+      ],
+      dairy: 1,
+      fruit: 3
+    };
+    const PLAN_KEY = 'dietPlan';
+    function clonePlan(src){
+      return JSON.parse(JSON.stringify(src));
+    }
+    function nOr(v, d){
+      const x = parseFloat(v);
+      return isFinite(x) ? x : d;
+    }
+    function loadPlan(){
+      try {
+        const s = JSON.parse(localStorage.getItem(PLAN_KEY) || 'null');
+        if (!s || !Array.isArray(s.meals) || s.meals.length !== 3) return clonePlan(DEFAULT_PLAN);
+        return {
+          meals: s.meals.map((m, i) => ({
+            name: DEFAULT_PLAN.meals[i].name,
+            c: nOr(m.c, DEFAULT_PLAN.meals[i].c),
+            p: nOr(m.p, DEFAULT_PLAN.meals[i].p),
+            f: nOr(m.f, DEFAULT_PLAN.meals[i].f)
+          })),
+          dairy: nOr(s.dairy, DEFAULT_PLAN.dairy),
+          fruit: nOr(s.fruit, DEFAULT_PLAN.fruit)
+        };
+      } catch (e) {
+        return clonePlan(DEFAULT_PLAN);
+      }
+    }
+    function totals(plan){
+      const t = { c: 0, p: 0, f: 0, dairy: plan.dairy, fruit: plan.fruit };
+      plan.meals.forEach(m => { t.c += m.c; t.p += m.p; t.f += m.f; });
+      return t;
+    }
+    function samePlan(a, b){
+      return JSON.stringify(a) === JSON.stringify(b);
+    }
+    let plan = loadPlan();
+    function fillPlanForm(){
+      plan.meals.forEach((m, i) => {
+        document.getElementById('m' + i + 'c').value = m.c;
+        document.getElementById('m' + i + 'p').value = m.p;
+        document.getElementById('m' + i + 'f').value = m.f;
+      });
+      document.getElementById('planDairy').value = plan.dairy;
+      document.getElementById('planFruit').value = plan.fruit;
+    }
+    function readPlanForm(){
+      return {
+        meals: [0,1,2].map(i => ({
+          name: DEFAULT_PLAN.meals[i].name,
+          c: nOr(document.getElementById('m' + i + 'c').value, 0),
+          p: nOr(document.getElementById('m' + i + 'p').value, 0),
+          f: nOr(document.getElementById('m' + i + 'f').value, 0)
+        })),
+        dairy: nOr(document.getElementById('planDairy').value, 0),
+        fruit: nOr(document.getElementById('planFruit').value, 0)
+      };
+    }
+    function renderQuota(){
+      const t = totals(plan);
+      document.getElementById('quotaBoxes').innerHTML =
+        '<div><b>' + t.c + '</b><span>五穀</span></div>' +
+        '<div><b>' + t.p + '</b><span>蛋白質</span></div>' +
+        '<div><b>' + t.f + '</b><span>脂肪</span></div>' +
+        '<div><b>' + t.dairy + '</b><span>奶</span></div>' +
+        '<div><b>' + t.fruit + '</b><span>水果</span></div>';
+      document.getElementById('mealBoxes').innerHTML = plan.meals.map(m =>
+        '<div><b>' + m.name + '</b>' + m.c + 'C ' + m.p + 'P ' + m.f + 'F</div>'
+      ).join('');
+      document.getElementById('planTotal').innerHTML =
+        '<div><b>' + t.c + '</b><span>全日五穀</span></div>' +
+        '<div><b>' + t.p + '</b><span>全日蛋白</span></div>' +
+        '<div><b>' + t.f + '</b><span>全日脂肪</span></div>' +
+        '<div><b>' + t.dairy + '</b><span>全日奶</span></div>' +
+        '<div><b>' + t.fruit + '</b><span>全日水果</span></div>';
+      document.getElementById('customFlag').classList.toggle('hidden', samePlan(plan, DEFAULT_PLAN));
+      document.getElementById('grainCap').textContent = '每項＝1份 · 全日 ' + t.c + ' 份';
+      document.getElementById('proCap').textContent = '每項＝1份 · 全日 ' + t.p + ' 份';
+      document.getElementById('fatCap').textContent = '全日 ' + t.f + ' 份';
+      document.getElementById('fruitCap').textContent = '每項＝1份 · 全日 ' + t.fruit + ' 份';
+      document.getElementById('dairyCap').textContent = '全日 ' + t.dairy + ' 份';
+      const h = document.getElementById('topbar').offsetHeight;
+      document.documentElement.style.setProperty('--header-h', h + 'px');
+    }
+    function savePlan(){
+      plan = readPlanForm();
+      localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+      renderQuota();
+      if (typeof renderToday === 'function') renderToday();
+    }
+    fillPlanForm();
+    renderQuota();
+    window.addEventListener('resize', renderQuota);
+    document.getElementById('savePlan').addEventListener('click', savePlan);
+    document.getElementById('resetPlan').addEventListener('click', () => {
+      plan = clonePlan(DEFAULT_PLAN);
+      localStorage.removeItem(PLAN_KEY);
+      fillPlanForm();
+      renderQuota();
+    });
+    ['m0c','m0p','m0f','m1c','m1p','m1f','m2c','m2p','m2f','planDairy','planFruit'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        document.getElementById('planTotal').innerHTML = (() => {
+          const draft = readPlanForm();
+          const t = totals(draft);
+          return '<div><b>' + t.c + '</b><span>全日五穀</span></div>' +
+            '<div><b>' + t.p + '</b><span>全日蛋白</span></div>' +
+            '<div><b>' + t.f + '</b><span>全日脂肪</span></div>' +
+            '<div><b>' + t.dairy + '</b><span>全日奶</span></div>' +
+            '<div><b>' + t.fruit + '</b><span>全日水果</span></div>';
+        })();
+      });
+    });
+    function goPlan(){
+      tabs.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      tabs.querySelector('[data-f="plan"]').classList.add('on');
+      filter = 'plan';
+      apply();
+    }
+    document.getElementById('openPlan').addEventListener('click', goPlan);
+
+    const LOG_KEY = 'dietTodayLogs';
+    function r1(n){ return Math.round((Number(n)||0)*10)/10; }
+    function loadLogs(){
+      try { const s = JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); return Array.isArray(s)?s:[]; }
+      catch(e){ return []; }
+    }
+    let logs = loadLogs();
+    function saveLogs(){ localStorage.setItem(LOG_KEY, JSON.stringify(logs)); }
+    function sumOf(list){
+      const t = {c:0,p:0,f:0,fruit:0,dairy:0};
+      list.forEach(x => { t.c+=+x.c||0; t.p+=+x.p||0; t.f+=+x.f||0; t.fruit+=+x.fruit||0; t.dairy+=+x.dairy||0; });
+      return {c:r1(t.c),p:r1(t.p),f:r1(t.f),fruit:r1(t.fruit),dairy:r1(t.dairy)};
+    }
+    function remainDay(){
+      const t = totals(plan); const e = sumOf(logs);
+      return {c:r1(t.c-e.c),p:r1(t.p-e.p),f:r1(t.f-e.f),fruit:r1(t.fruit-e.fruit),dairy:r1(t.dairy-e.dairy)};
+    }
+    function remainMeal(i){
+      const m = plan.meals[i]; const e = sumOf(logs.filter(x => x.meal===i));
+      return {c:r1(m.c-e.c),p:r1(m.p-e.p),f:r1(m.f-e.f)};
+    }
+    function guessMeal(){
+      const h = new Date().getHours();
+      return h < 11 ? 0 : h < 16 ? 1 : 2;
+    }
+    function fmtCPF(x){ return x.c + 'C ' + x.p + 'P ' + x.f + 'F'; }
+    let recPlace = 'out';
+    let recMeal = guessMeal();
+    let showYellow = false;
+    let lastCalc = null;
+    let logMode = 'pick';
+
+    function renderToday(){
+      if (!document.getElementById('todayMeals')) return;
+      const eAll = sumOf(logs);
+      const day = remainDay();
+      document.getElementById('todayMeals').innerHTML = plan.meals.map((m,i) => {
+        const e = sumOf(logs.filter(x => x.meal===i));
+        const r = remainMeal(i);
+        const over = r.c<0 || r.p<0 || r.f<0;
+        return '<div class="meal"><h3>' + m.name + '餐　配額 ' + fmtCPF(m) + '</h3>' +
+          '<div class="bar">已食 ' + fmtCPF(e) + '</div>' +
+          '<div class="bar" style="color:' + (over?'#9b2c2c':'#2f6b45') + ';font-weight:700">剩餘 ' + fmtCPF(r) + '</div></div>';
+      }).join('');
+      document.getElementById('todayExtra').innerHTML =
+        '水果 剩餘 ' + day.fruit + ' / ' + plan.fruit + '　·　奶 剩餘 ' + day.dairy + ' / ' + plan.dairy +
+        '<br>全日已食 ' + fmtCPF(eAll) + '　剩 ' + fmtCPF(day);
+      document.getElementById('todayLogs').innerHTML = logs.length ? logs.map((x,idx) =>
+        '<div class="logline"><div><b>' + (plan.meals[x.meal]?plan.meals[x.meal].name:'') + '</b> ' +
+        (x.name||'') + '<div class="sub">' + fmtCPF(x) +
+        (x.fruit?('　水果'+x.fruit):'') + (x.dairy?('　奶'+x.dairy):'') +
+        '</div></div><button class="x" type="button" data-del="'+idx+'">刪</button></div>'
+      ).join('') : '<p class="bar">今日未記。</p>';
+      document.getElementById('recMeals').innerHTML = plan.meals.map((m,i) =>
+        '<button class="chip'+(i===recMeal?' on':'')+'" type="button" data-recmeal="'+i+'">'+m.name+'餐</button>'
+      ).join('');
+      renderRecs();
+      renderQuota();
+    }
+    function blockedText(txt){
+      const t = txt || '';
+      if (document.getElementById('rStir').checked && /炒菜/.test(t)) return true;
+      if (document.getElementById('rNuts').checked && /花生|杏仁|腰果|合桃/.test(t) && /暫避|打叉/.test(t)) return true;
+      if (document.getElementById('rHofun').checked && /河粉|公仔麵|伊麵|油麵|潮粉|銀針粉/.test(t) && !/綠/.test(t)) return true;
+      if (document.getElementById('rEgg').checked && /煎蛋|炒蛋|奄列|太陽蛋/.test(t)) return true;
+      if (document.getElementById('rFatty').checked && /牛腩|魚腩|肥牛|牛舌|排骨|雞翼|牛仔骨/.test(t) && /避|紅/.test(t)) return true;
+      return false;
+    }
+    function estimateItem(el){
+      const cat = el.closest('section')?.dataset.cat || '';
+      const k = (el.dataset.k||'') + ' ' + (el.querySelector('.name')?.innerText||'');
+      const t = k;
+      let c=0,p=0,f=0,fruit=0,dairy=0;
+      if (cat==='grain') return {c:1,p:0,f:0,fruit:0,dairy:0};
+      if (cat==='pro') return {c:0,p:1,f:0,fruit:0,dairy:0};
+      if (cat==='fruit') {
+        if (/牛油果/.test(t)) return {c:0,p:0,f:1,fruit:1,dairy:0};
+        if (/榴槤|椰青肉/.test(t)) return {c:0,p:0,f:0,fruit:0,dairy:0};
+        return {c:0,p:0,f:0,fruit:1,dairy:0};
+      }
+      if (cat==='dairy') return {c:0,p:0,f:0,fruit:0,dairy:1};
+      if (cat==='fat') return {c:0,p:0,f:1,fruit:0,dairy:0};
+      if (/常餐/.test(t)) return {c:4,p:3,f:0,fruit:0,dairy:0};
+      if (/壽司 3|壽司：|3件＝1/.test(t) || (/壽司/.test(t) && /3件/.test(el.innerText))) return {c:1,p:1,f:0,fruit:0,dairy:0};
+      if (/椰青水/.test(t)) return {c:0,p:0,f:0,fruit:2,dairy:0};
+      if (/腸粉/.test(t)) return {c:1,p:1,f:0,fruit:0,dairy:0};
+      if (/雞包仔|叉燒包|奶皇包|蒸包/.test(t)) return {c:2,p:0,f:0,fruit:0,dairy:0};
+      if (/蝦餃|帶子餃|菜苗餃|粉果|鯪魚球/.test(t) && /1件/.test(el.innerText)) return {c:0,p:1,f:0,fruit:0,dairy:0};
+      if (/燒味飯|海南雞飯/.test(t)) return {c:3,p:2,f:0,fruit:0,dairy:0};
+      if (/湯飯|碟頭飯/.test(t)) return {c:3,p:2,f:0,fruit:0,dairy:0};
+      if (/定食/.test(t)) return {c:2,p:2,f:0,fruit:0,dairy:0};
+      if (/三文治|bagel|panini|酸種|法包/.test(t) && /配/.test(t+el.innerText)) return {c:2,p:1,f:0,fruit:0,dairy:0};
+      if (/粉麵|米線|煨麵|陽春|烏冬/.test(t) && /蛋白|鮮牛|雞|海鮮|嫩雞/.test(t)) return {c:2,p:2,f:0,fruit:0,dairy:0};
+      if (/粉麵|米粉|米線|通粉|意粉/.test(t) && /鮮牛|豬潤|白魚蛋|牛丸/.test(t)) return {c:2,p:2,f:0,fruit:0,dairy:0};
+      if (cat==='cart' && /粉：|米粉/.test(t)) return {c:2,p:0,f:0,fruit:0,dairy:0};
+      if (cat==='cart' && /優質蛋白|加工肉/.test(t)) return {c:0,p:2,f:0,fruit:0,dairy:0};
+      if (/粥/.test(t) && /蛋白|瘦肉|牛|魚|雞|豬潤/.test(t)) return {c:1,p:1,f:0,fruit:0,dairy:0};
+      if (/粥/.test(t)) return {c:1,p:0,f:0,fruit:0,dairy:0};
+      if (/饅頭|銀絲卷/.test(t)) return {c:1,p:0,f:0,fruit:0,dairy:0};
+      if (/烤／燒|西冷|牛柳|春雞|三文魚柳/.test(t)) return {c:0,p:3,f:0,fruit:0,dairy:0};
+      if (/沙律/.test(t)) return {c:0,p:2,f:0,fruit:0,dairy:0};
+      if (/豆漿/.test(t)) return {c:0,p:0,f:0,fruit:0,dairy:1};
+      if (/油菜|蔬菜|全走|走汁 走油/.test(t) && !/飯|粉|麵/.test(t)) return {c:0,p:0,f:0,fruit:0,dairy:0};
+      if (/飯/.test(t)) { c=3; p=2; }
+      else if (/粉|麵/.test(t)) { c=2; p=2; }
+      else if (/蝦|魚|雞|牛|肉|蜆|蠔|豆腐|蛋/.test(t)) { p=2; }
+      return {c,p,f,fruit,dairy};
+    }
+    function fits(est, rem){
+      return est.c <= rem.c + 0.15 && est.p <= rem.p + 0.15 && est.f <= rem.f + 0.15 &&
+        (est.fruit||0) <= (remainDay().fruit + 0.15) && (est.dairy||0) <= (remainDay().dairy + 0.15);
+    }
+    function bowl(c){
+      const n = r1(c/3);
+      if (c===1) return '⅓碗白飯';
+      if (c===2) return '⅔碗白飯';
+      if (c===3) return '1碗白飯';
+      return c + ' × ⅓碗白飯（約 ' + r1(c/3) + ' 碗）';
+    }
+    function homeRecs(rem){
+      const out = [];
+      if (rem.c<=0 && rem.p<=0 && rem.f<=0) {
+        out.push({g:true, name:'呢餐 C/P/F 已滿', sub:'可以補水果／奶，或者蒸菜'});
+      } else {
+        const bits = [];
+        if (rem.c>0) bits.push(bowl(rem.c));
+        if (rem.p>0) bits.push(rem.p + ' 份蛋白（麻雀牌瘦豬／雞胸，或蛋 ' + rem.p + ' 隻，或水浸吞拿 ' + rem.p + '×½罐，或蜆 ' + (rem.p*7) + ' 隻）');
+        if (rem.f>0) bits.push(rem.f + ' 茶匙油或 ' + (rem.f*2) + ' 茶匙奇亞籽');
+        bits.push('蒸／灼菜，唔炒');
+        out.push({g:true, name:'屋企：照剩餘砌一餐', sub: bits.join(' ＋ ')});
+        if (rem.c>=2 && rem.p>=1) out.push({g:true, name:'麥皮＋蛋', sub:'未煮麥皮 ' + (18*rem.c) + 'g ＋ 烚蛋 ' + rem.p + ' 隻' + (rem.f>0?' ＋ 奇亞籽':'')});
+        if (rem.c>=1 && rem.p>=1) out.push({g:true, name:'方包＋瘦肉', sub: rem.c + ' 片方包走牛油 ＋ 瘦肉 ' + rem.p + ' 份'});
+      }
+      const day = remainDay();
+      if (day.fruit>0) out.push({g:true, name:'加水果 ' + day.fruit + ' 份', sub:'小蘋果／橙 1個＝1份　香蕉½條＝1份'});
+      if (day.dairy>0) out.push({g:true, name:'加奶 ' + day.dairy + ' 份', sub:'加鈣無糖豆漿 1杯 或 低脂芝士 1片'});
+      return out;
+    }
+    function renderRecs(){
+      const box = document.getElementById('recs');
+      if (!box) return;
+      const rem = remainMeal(recMeal);
+      const day = remainDay();
+      let html = '<div class="note">' + plan.meals[recMeal].name + '餐剩餘 ' + fmtCPF(rem) +
+        '　·　水果剩 ' + day.fruit + '　奶剩 ' + day.dairy +
+        (recPlace==='out'?'　·　出街當已有油，唔使再加 F':'') + '</div>';
+      if (recPlace==='home') {
+        homeRecs(rem).forEach(r => {
+          html += '<div class="rec '+(r.g?'g':'y')+'"><div class="name">'+r.name+'</div><div class="sub">'+r.sub+'</div></div>';
+        });
+        box.innerHTML = html;
+        return;
+      }
+      const shops = {cha:'茶餐廳',cart:'車仔麵',jp:'日本',thai:'泰越',sh:'京滬',cafe:'西廳',chiu:'潮洲',vegshop:'素食',congee:'粥品',bakery:'麵包店',dimsum:'飲茶',hotpot:'火鍋'};
+      const greens = []; const yellows = [];
+      document.querySelectorAll('main section .item').forEach(el => {
+        const sec = el.closest('section');
+        const cat = sec?.dataset.cat;
+        if (!shops[cat]) return;
+        if (el.classList.contains('avoid')) return;
+        const isY = el.classList.contains('mid');
+        const isG = el.classList.contains('prefer') || (!isY && !el.classList.contains('avoid'));
+        if (!isG && !isY) return;
+        if (isY && !showYellow) return;
+        const name = el.querySelector('.name')?.innerText || '';
+        const blob = name + ' ' + (el.innerText||'');
+        if (blockedText(blob)) return;
+        const est = estimateItem(el);
+        if (!fits(est, rem)) return;
+        const row = {cat, shop:shops[cat], name, est, g: !isY};
+        (isY?yellows:greens).push(row);
+      });
+      function card(r){
+        return '<div class="rec '+(r.g?'g':'y')+'"><div class="name">'+r.shop+' · '+r.name+'</div><div class="sub">約 '+fmtCPF(r.est)+
+          (r.est.fruit?('　水果'+r.est.fruit):'')+(r.est.dairy?('　奶'+r.est.dairy):'')+
+          '</div></div>';
+      }
+      if (!greens.length && !yellows.length) html += '<p class="bar">呢餐剩餘好少，試下自己入份量或者揀屋企砌。</p>';
+      greens.slice(0,12).forEach(r => html += card(r));
+      if (showYellow) yellows.slice(0,8).forEach(r => html += card(r));
+      else html += '<p class="bar">而家淨係綠燈。撳「顯示黃燈」先出 Keep Fit。</p>';
+      box.innerHTML = html;
+    }
+
+    document.getElementById('btnEat').addEventListener('click', openSheet);
+    document.getElementById('btnNewDay').addEventListener('click', () => {
+      if (!confirm('清今日已食紀錄？配額數字會留低。')) return;
+      logs = []; saveLogs(); renderToday();
+    });
+    document.getElementById('todayLogs').addEventListener('click', e => {
+      const b = e.target.closest('[data-del]');
+      if (!b) return;
+      logs.splice(+b.dataset.del, 1); saveLogs(); renderToday();
+    });
+    document.querySelectorAll('[data-place]').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('[data-place]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on'); recPlace = b.dataset.place; renderRecs();
+    }));
+    document.getElementById('recMeals').addEventListener('click', e => {
+      const b = e.target.closest('[data-recmeal]');
+      if (!b) return;
+      recMeal = +b.dataset.recmeal; renderToday();
+    });
+    document.getElementById('btnYellow').addEventListener('click', () => {
+      showYellow = !showYellow;
+      document.getElementById('btnYellow').textContent = showYellow ? '隱藏黃燈' : '顯示黃燈';
+      renderRecs();
+    });
+    ['rStir','rNuts','rHofun','rEgg','rFatty'].forEach(id => {
+      document.getElementById(id).addEventListener('change', renderRecs);
+    });
+
+    function openSheet(){
+      const sel = document.getElementById('logMeal');
+      sel.innerHTML = plan.meals.map((m,i) => '<option value="'+i+'"'+(i===guessMeal()?' selected':'')+'>'+m.name+'餐</option>').join('');
+      document.getElementById('logName').value = '';
+      document.getElementById('logC').value = 0;
+      document.getElementById('logP').value = 0;
+      document.getElementById('logF').value = 0;
+      document.getElementById('logFr').value = 0;
+      document.getElementById('logD').value = 0;
+      logMode = 'pick';
+      document.querySelectorAll('[data-logmode]').forEach(x => x.classList.toggle('on', x.dataset.logmode==='pick'));
+      document.getElementById('pickBox').classList.remove('hidden');
+      document.getElementById('pickQ').value = '';
+      fillPick('');
+      document.getElementById('sheet').classList.remove('hidden');
+    }
+    function fillPick(term){
+      const t = (term||'').toLowerCase();
+      const rows = [];
+      document.querySelectorAll('main section .item').forEach(el => {
+        if (el.classList.contains('avoid')) return;
+        const name = el.querySelector('.name')?.innerText || '';
+        if (t && !(name+el.dataset.k).toLowerCase().includes(t)) return;
+        const sec = el.closest('section')?.dataset.cat || '';
+        if (['plan','today','calc','out','drink','veg'].includes(sec)) return;
+        const est = estimateItem(el);
+        rows.push({name, est, g: el.classList.contains('prefer'), y: el.classList.contains('mid')});
+      });
+      document.getElementById('pickList').innerHTML = rows.slice(0,40).map((r,i) =>
+        '<div class="item '+(r.g?'prefer':r.y?'mid':'')+'" data-pick="'+i+'"><div><div class="name">'+r.name+
+        '</div><div class="sub">約 '+fmtCPF(r.est)+'</div></div><div class="amt">揀</div></div>'
+      ).join('') || '<p class="bar">搵唔到</p>';
+      fillPick._rows = rows;
+    }
+    document.getElementById('pickQ').addEventListener('input', e => fillPick(e.target.value));
+    document.getElementById('pickList').addEventListener('click', e => {
+      const it = e.target.closest('[data-pick]');
+      if (!it) return;
+      const r = fillPick._rows[+it.dataset.pick];
+      if (!r) return;
+      document.getElementById('logName').value = r.name;
+      document.getElementById('logC').value = r.est.c;
+      document.getElementById('logP').value = r.est.p;
+      document.getElementById('logF').value = r.est.f;
+      document.getElementById('logFr').value = r.est.fruit||0;
+      document.getElementById('logD').value = r.est.dairy||0;
+    });
+    document.querySelectorAll('[data-logmode]').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('[data-logmode]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      logMode = b.dataset.logmode;
+      document.getElementById('pickBox').classList.toggle('hidden', logMode!=='pick');
+    }));
+    document.getElementById('logCancel').addEventListener('click', () => document.getElementById('sheet').classList.add('hidden'));
+    document.getElementById('sheet').addEventListener('click', e => {
+      if (e.target.id==='sheet') document.getElementById('sheet').classList.add('hidden');
+    });
+    document.getElementById('logSave').addEventListener('click', () => {
+      logs.push({
+        meal: +document.getElementById('logMeal').value,
+        name: document.getElementById('logName').value.trim() || '未命名',
+        c: nOr(document.getElementById('logC').value,0),
+        p: nOr(document.getElementById('logP').value,0),
+        f: nOr(document.getElementById('logF').value,0),
+        fruit: nOr(document.getElementById('logFr').value,0),
+        dairy: nOr(document.getElementById('logD').value,0)
+      });
+      saveLogs();
+      document.getElementById('sheet').classList.add('hidden');
+      renderToday();
+    });
+    document.getElementById('addCalcToday').addEventListener('click', () => {
+      if (!lastCalc) { alert('先撳「計幾多份」'); return; }
+      recMeal = guessMeal();
+      logs.push({ meal: guessMeal(), name: lastCalc.name, c: lastCalc.c, p: lastCalc.p, f: lastCalc.f, fruit:0, dairy:0 });
+      saveLogs();
+      alert('已加入' + plan.meals[guessMeal()].name + '餐');
+      renderToday();
+    });
+
+    function norm(s){ return (s||'').toLowerCase().replace(/\s+/g,''); }
+    function apply() {
+      const term = norm(q.value);
+      let shown = 0;
+      document.querySelectorAll('main section').forEach(sec => {
+        const cat = sec.dataset.cat;
+        if (cat === 'calc' || cat === 'plan' || cat === 'today') {
+          const on = (filter===cat || filter==='all') && !term;
+          sec.classList.toggle('hidden', !on);
+          if (on) shown++;
+          return;
+        }
+        let secShow = 0;
+        sec.querySelectorAll('.item').forEach(it => {
+          const prefer = it.classList.contains('prefer');
+          const avoid = it.classList.contains('avoid');
+          const catOk = filter==='all' || (filter==='prefer' && prefer) || (filter==='avoid' && avoid) || cat===filter;
+          const text = norm(it.innerText + ' ' + (it.dataset.k||''));
+          const searchOk = !term || text.includes(term);
+          const on = catOk && searchOk;
+          it.classList.toggle('hidden', !on);
+          if (on) { secShow++; shown++; }
+        });
+        const hideSec = filter!=='all' && filter!=='prefer' && filter!=='avoid' && cat!==filter;
+        sec.classList.toggle('hidden', hideSec || secShow===0);
+      });
+      empty.classList.toggle('hidden', shown>0);
+    }
+    tabs.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      tabs.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      filter = b.dataset.f;
+      apply();
+    });
+    q.addEventListener('input', apply);
+
+    const base = document.getElementById('base');
+    const eatLab = document.getElementById('eatLab');
+    base.addEventListener('change', () => {
+      eatLab.textContent = base.value === '100' ? '我食咗幾多克' : '我食咗幾多份';
+      document.getElementById('eat').value = base.value === '100' ? '100' : '1';
+    });
+
+    function num(id){ const v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : 0; }
+    function pick(text, patterns){
+      for (const p of patterns) {
+        const m = text.match(p);
+        if (m) return parseFloat(m[1]);
+      }
+      return null;
+    }
+    function parseLabel(raw){
+      const t = (raw||'').replace(/,/g,'.').replace(/克/g,'g');
+      const carb = pick(t, [
+        /(?:總)?碳水(?:化合物)?[^0-9]{0,24}(\d+(?:\.\d+)?)/i,
+        /carbohydrate[s]?[^0-9]{0,24}(\d+(?:\.\d+)?)/i
+      ]);
+      const pro = pick(t, [
+        /蛋白質[^0-9]{0,24}(\d+(?:\.\d+)?)/,
+        /protein[^0-9]{0,24}(\d+(?:\.\d+)?)/i
+      ]);
+      const fat = pick(t, [
+        /總脂肪[^0-9]{0,24}(\d+(?:\.\d+)?)/,
+        /脂肪[^0-9]{0,24}(\d+(?:\.\d+)?)/,
+        /(?:total\s*)?fat[^0-9]{0,24}(\d+(?:\.\d+)?)/i
+      ]);
+      const fiber = pick(t, [
+        /膳食纖維[^0-9]{0,24}(\d+(?:\.\d+)?)/,
+        /纖維[^0-9]{0,24}(\d+(?:\.\d+)?)/,
+        /(?:dietary\s*)?fibre?[^0-9]{0,24}(\d+(?:\.\d+)?)/i
+      ]);
+      const sugar = pick(t, [
+        /糖(?:類)?[^0-9]{0,24}(\d+(?:\.\d+)?)/,
+        /sugar[s]?[^0-9]{0,24}(\d+(?:\.\d+)?)/i
+      ]);
+      const per100 = /每\s*100\s*(?:克|g)|per\s*100\s*g/i.test(t);
+      return { carb, pro, fat, fiber, sugar, per100 };
+    }
+    document.getElementById('labelPaste').addEventListener('input', () => {
+      const p = parseLabel(document.getElementById('labelPaste').value);
+      if (p.carb != null) document.getElementById('carb').value = p.carb;
+      if (p.pro != null) document.getElementById('pro').value = p.pro;
+      if (p.fat != null) document.getElementById('fatg').value = p.fat;
+      if (p.fiber != null) document.getElementById('fiber').value = p.fiber;
+      if (p.sugar != null) document.getElementById('sugar').value = p.sugar;
+      if (p.per100) { base.value = '100'; eatLab.textContent = '我食咗幾多克'; if (!document.getElementById('eat').value) document.getElementById('eat').value = '100'; }
+    });
+
+    function round1(n){ return Math.round(n * 10) / 10; }
+    function runCalc(){
+      const carb = num('carb'), pro = num('pro'), fat = num('fatg'), fiber = num('fiber');
+      let eat = num('eat');
+      if (eat <= 0) eat = 1;
+      const mult = base.value === '100' ? (eat / 100) : eat;
+      const netCarb = Math.max(0, carb - fiber);
+      const g = round1(netCarb * mult / 15);
+      const p = round1(pro * mult / 7);
+      const f = round1(fat * mult / 5);
+      const ag = document.getElementById('aGrain');
+      const ap = document.getElementById('aPro');
+      const af = document.getElementById('aFat');
+      document.getElementById('ans').hidden = false;
+      ag.querySelector('b').textContent = g;
+      ap.querySelector('b').textContent = p;
+      af.querySelector('b').textContent = f;
+      const lim = totals(plan);
+      ag.classList.toggle('over', g > lim.c);
+      ap.classList.toggle('over', p > lim.p);
+      af.classList.toggle('over', f > lim.f);
+      const bits = [];
+      bits.push('淨碳水 ' + round1(netCarb * mult) + 'g ÷ 15');
+      bits.push('蛋白 ' + round1(pro * mult) + 'g ÷ 7');
+      bits.push('脂肪 ' + round1(fat * mult) + 'g ÷ 5');
+      if (g > lim.c) bits.push('五穀超過今日 ' + lim.c + ' 份');
+      if (p > lim.p) bits.push('蛋白超過今日 ' + lim.p + ' 份');
+      if (f > lim.f) bits.push('脂肪超過今日 ' + lim.f + ' 份');
+      document.getElementById('calcHint').textContent = bits.join('　·　');
+      const name = document.getElementById('foodName').value.trim() || '無名稱';
+      lastCalc = { name: name, c: g, p: p, f: f };
+      const row = name + '｜' + g + '五穀 ' + p + '蛋白 ' + f + '脂肪';
+      let hist = [];
+      try { hist = JSON.parse(localStorage.getItem('dietHist') || '[]'); } catch(e) {}
+      hist.unshift(row);
+      hist = hist.slice(0, 12);
+      localStorage.setItem('dietHist', JSON.stringify(hist));
+      renderHist();
+    }
+    function renderHist(){
+      let hist = [];
+      try { hist = JSON.parse(localStorage.getItem('dietHist') || '[]'); } catch(e) {}
+      document.getElementById('hist').innerHTML = hist.length
+        ? hist.map(x => '<li>' + x.replace(/</g,'') + '</li>').join('')
+        : '<li>未有紀錄</li>';
+    }
+    document.getElementById('calcBtn').addEventListener('click', runCalc);
+    ['carb','pro','fatg','fiber','eat'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') runCalc(); });
+    });
+    renderHist();
+    apply();
+    renderToday();
+  </script>
+</body>
+</html>
